@@ -4,7 +4,7 @@ use 5.008_001;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Carp ();
 use Scalar::Util qw(looks_like_number);
@@ -16,16 +16,21 @@ use constant ALIGN_RIGHT => 2;
 use overload '""' => sub { shift->draw };
 
 # alias for Text::ASCIITable
-*setCols    = \&set_header;
-*addRow     = \&add_row;
-*addRowLine = \&add_row_line;
+{
+    no warnings 'once';
+    *setCols    = \&set_header;
+    *addRow     = \&add_row;
+    *addRowLine = \&add_row_line;
+}
 
 sub new {
-    my $class = shift;
+    my ($class, %args) = @_;
 
     bless {
         header => [],
         rows   => [],
+        border => 1,
+        %args,
     }, $class;
 }
 
@@ -86,6 +91,13 @@ sub _adjust_cols {
         my $spaces = $longest - scalar(@{$cols});
         push @{$cols}, '' for 1..$spaces;
     }
+}
+
+sub add_rows {
+    my ($self, @rows) = @_;
+
+    $self->add_row($_) for @rows;
+    return $self;
 }
 
 sub add_row {
@@ -149,12 +161,12 @@ sub draw {
     $self->_check_set_header;
 
     $self->_set_column_length();
-    $self->_set_separater();
+    $self->_set_separator();
 
     # header
-    push @ret, $self->{top_line};
+    push @ret, $self->{top_line} if $self->{border};
     push @ret, $self->_generate_row_string($_) for @{$self->{header}};
-    push @ret, $self->{separater};
+    push @ret, $self->{separator} if $self->{border};
 
     # body
     my $row_length = scalar @{$self->{rows}};
@@ -165,11 +177,11 @@ sub draw {
             push @ret, $self->_generate_row_string($row);
         } elsif ( ref($row) eq 'Text::UnicodeTable::Simple::Line') {
             # if last line is row_line, it is ignored.
-            push @ret, $self->{separater} if $i != $row_length-1;
+            push @ret, $self->{separator} if $i != $row_length-1;
         }
     }
 
-    push @ret, $self->{bottom_line};
+    push @ret, $self->{bottom_line} if $self->{border};
 
     my $str = join "\n", @ret;
     return "$str\n";
@@ -178,13 +190,17 @@ sub draw {
 sub _generate_row_string {
     my ($self, $row_ref) = @_;
 
-    my $str = "|";
+    my $separator = $self->{border} ? '|' : '';
+    my $str = $separator;
+
     my $index = 0;
     for my $row_elm (@{$row_ref}) {
         $str .= _format($row_elm, $self->_get_column_length($index));
-        $str .= '|';
+        $str .= $separator;
         $index++;
     }
+
+    $str =~ s{(^\s|\s$)}{}g if $self->{border};
 
     return $str;
 }
@@ -206,7 +222,7 @@ sub _format {
     return $retval;
 }
 
-sub _set_separater {
+sub _set_separator {
     my $self = shift;
 
     my $each_row_width = $self->{column_length};
@@ -216,7 +232,7 @@ sub _set_separater {
         $str .= '+';
     }
 
-    $self->{separater}    = $str;
+    $self->{separator}    = $self->{border} ? $str : "";
     ($self->{top_line}    = $str) =~ s{^\+(.*?)\+$}{.$1.};
     ($self->{bottom_line} = $str) =~ s{^\+(.*?)\+$}{'$1'};
 }
@@ -351,9 +367,9 @@ Text::UnicodeTable::Simple - Create a formatted table using characters.
 
 =head1 DESCRIPTION
 
-Text::UnicodeTable::Simple create character table.
+Text::UnicodeTable::Simple creates character table.
 
-There are some module for creating text table at CPAN, L<Text::ASCIITable>,
+There are some modules for creating a text table at CPAN, L<Text::ASCIITable>,
 L<Text::SimpleTable>, L<Text::Table> etc. But those module deal with only ASCII,
 don't deal with full width characters. If you use them with full width
 characters, a table created may be bad-looking.
@@ -366,9 +382,19 @@ characters. See C<eg/> directory for Japanese examples.
 
 =head2 Methods
 
-=head3 new()
+=head3 new(%args)
 
-Creates and returns a new table instance.
+Creates and returns a new table instance with I<%args>.
+
+I<%args> might be
+
+=over
+
+=item border :Bool = True
+
+Table has no border if C<border> is False.
+
+=back
 
 =head3 set_header() [alias: addCols ]
 
@@ -383,6 +409,11 @@ Input strings should be B<string>, not B<octet stream>.
 Add one row to the table.
 
 Input strings should be B<string>, not B<octet stream>.
+
+=head3 add_rows(@collists)
+
+Add rows to the table. You can add row at one time.
+Each C<@collists> element should be ArrayRef.
 
 =head3 add_row_line() [alias: addRowLine ]
 
