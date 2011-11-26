@@ -4,7 +4,7 @@ use 5.008_001;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Carp ();
 use Scalar::Util qw(looks_like_number);
@@ -26,12 +26,23 @@ use overload '""' => sub { shift->draw };
 sub new {
     my ($class, %args) = @_;
 
-    bless {
+    my $header = delete $args{header};
+    if (defined $header && (ref $header ne 'ARRAY')) {
+        Carp::croak("'header' param should be ArrayRef");
+    }
+
+    my $self = bless {
         header => [],
         rows   => [],
         border => 1,
         %args,
     }, $class;
+
+    if (defined $header) {
+        $self->set_header($header);
+    }
+
+    $self;
 }
 
 sub set_header {
@@ -376,7 +387,7 @@ characters, a table created may be bad-looking.
 
 Text::UnicodeTable::Simple resolves problem of full width characters.
 So you can use Japansese Hiragana, Katakana, Korean Hangeul, Chinese Kanji
-characters. See C<eg/> directory for Japanese examples.
+characters. See C<eg/> directory for examples.
 
 =head1 INTERFACE
 
@@ -389,6 +400,11 @@ Creates and returns a new table instance with I<%args>.
 I<%args> might be
 
 =over
+
+=item header :ArrayRef
+
+Table header. If you set table header with constructor,
+you can omit C<set_header> method.
 
 =item border :Bool = True
 

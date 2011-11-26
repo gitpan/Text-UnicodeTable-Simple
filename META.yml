@@ -26,4 +26,4 @@ requires:
 resources:
   license: http://dev.perl.org/licenses/
   repository: git://github.com/syohex/p5-Text-UnicodeTable-Simple.git
-version: 0.02
+version: 0.03
