@@ -4,7 +4,7 @@ use 5.008_001;
 use strict;
 use warnings;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use Carp ();
 use Scalar::Util qw(looks_like_number);
@@ -444,7 +444,8 @@ Each C<@collists> element should be ArrayRef.
 
 =head3 add_row_line() [alias: addRowLine ]
 
-Add a line after the current row.
+Add a line after the current row. If 'border' parameter is false,
+add a new line.
 
 =head3 draw()
 
